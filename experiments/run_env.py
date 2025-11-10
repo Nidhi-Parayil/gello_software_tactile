@@ -140,7 +140,7 @@ def main(args):
             }
             if args.start_joints is None:
                 reset_joints = np.deg2rad(
-                    [0, -90, 90, -90, -90, 0, 0]
+                    [0, -90, 90, -90, -90, 0]
                 )  # Change this to your own reset joints
             else:
                 reset_joints = np.array(args.start_joints)
@@ -176,14 +176,15 @@ def main(args):
             raise ValueError("Invalid agent name")
 
     agent = instantiate_from_dict(agent_cfg)
+    print(agent.act(env.get_obs()))
     # going to start position
     print("Going to start position")
-    start_pos = agent.act(env.get_obs())
+    start_pos = agent.act(env.get_obs())[0:6]
     obs = env.get_obs()
-    joints = obs["joint_positions"]
+    joints = obs["joint_positions"][0:6]
 
-    abs_deltas = np.abs(start_pos - joints)
-    id_max_joint_delta = np.argmax(abs_deltas)
+    abs_deltas = np.abs(start_pos[0:6] - joints[0:6])
+    id_max_joint_delta = np.argmax(abs_deltas[0:6])
 
     max_joint_delta = 0.8
     if abs_deltas[id_max_joint_delta] > max_joint_delta:
@@ -219,8 +220,8 @@ def main(args):
 
     obs = env.get_obs()
     joints = obs["joint_positions"]
-    action = agent.act(obs)
-    if (action - joints > 0.5).any():
+    action = agent.act(obs) 
+    if (action[0:6] - joints[0:6] > 0.5).any():
         print("Action is too big")
 
         # print which joints are too big

@@ -61,7 +61,7 @@ class RobotState:
     j4: float
     j5: float
     j6: float
-    j7: float
+    # j7: float
     aa: np.ndarray
 
     @staticmethod
@@ -82,7 +82,7 @@ class RobotState:
             joints[3],
             joints[4],
             joints[5],
-            joints[6],
+            # joints[6],
             aa,
         )
 
@@ -93,7 +93,7 @@ class RobotState:
         return _quat_from_aa(self.aa)
 
     def joints(self) -> np.ndarray:
-        return np.array([self.j1, self.j2, self.j3, self.j4, self.j5, self.j6, self.j7])
+        return np.array([self.j1, self.j2, self.j3, self.j4, self.j5, self.j6])
 
     def gripper_pos(self) -> float:
         return self.gripper
@@ -123,19 +123,21 @@ class XArmRobot(Robot):
     DEFAULT_MAX_DELTA = 0.05
 
     def num_dofs(self) -> int:
-        return 8
+        return 7
 
     def get_joint_state(self) -> np.ndarray:
         state = self.get_state()
         gripper = state.gripper_pos()
-        all_dofs = np.concatenate([state.joints(), np.array([gripper])])
+        all_dofs = np.concatenate([state.joints()[0:6], np.array([gripper])])
         return all_dofs
 
     def command_joint_state(self, joint_state: np.ndarray) -> None:
-        if len(joint_state) == 7:
-            self.set_command(joint_state, None)
-        elif len(joint_state) == 8:
-            self.set_command(joint_state[:7], joint_state[7])
+        if len(joint_state) == 6:
+            # self.set_command(joint_state, None)
+            pass
+        elif len(joint_state) == 7:
+            self.set_command(joint_state[:6], joint_state[6])
+        
         else:
             raise ValueError(
                 f"Invalid joint state: {joint_state}, len={len(joint_state)}"
@@ -153,12 +155,39 @@ class XArmRobot(Robot):
         self,
         ip: str = "192.168.1.226",
         real: bool = True,
-        control_frequency: float = 50.0,
+        control_frequency: float = 100.0,
         max_delta: float = DEFAULT_MAX_DELTA,
     ):
-        print(ip)
+        # print(ip)
         self.real = real
         self.max_delta = max_delta
+
+
+        raw = input(
+            f"\nCurrent joints (rad): 0.5,0.02,0.5\n"
+            "Enter 3 target joint angles in radians, space/comma separated, or just press Enter to keep current pose:\n> "
+        ).strip()
+        if raw == "":
+            
+            self.target_position = np.asarray([0.5,0.02,0.5])
+        else:
+            parts = raw.replace(",", " ").split()
+            if len(parts) == 6:
+                try:
+                    
+                    self.target_position = np.array([float(x) for x in parts], dtype=float)
+                except ValueError:
+                    print("Could not parse numbers, keeping current pose.")
+                    self.target_position = np.asarray([0.5,0.02,0.5])
+            else:
+                print("Expected 6 values, keeping current pose.")
+                self.target_position = np.asarray([0.5,0.02,0.5])
+
+
+
+
+
+
         if real:
             from xarm.wrapper import XArmAPI
 
@@ -168,7 +197,7 @@ class XArmRobot(Robot):
 
         self._control_frequency = control_frequency
         self._clear_error_states()
-        self._set_gripper_position(self.GRIPPER_OPEN)
+        # self._set_gripper_position(self.GRIPPER_OPEN)
 
         self.last_state_lock = threading.Lock()
         self.target_command_lock = threading.Lock()
@@ -190,7 +219,7 @@ class XArmRobot(Robot):
     def set_command(self, joints: np.ndarray, gripper: Optional[float] = None) -> None:
         with self.target_command_lock:
             self.target_command = {
-                "joints": joints,
+                "joints": joints[0:6],
                 "gripper": gripper,
             }
 
@@ -207,28 +236,29 @@ class XArmRobot(Robot):
         time.sleep(1)
         self.robot.set_state(state=0)
         time.sleep(1)
-        self.robot.set_gripper_enable(True)
-        time.sleep(1)
-        self.robot.set_gripper_mode(0)
-        time.sleep(1)
-        self.robot.set_gripper_speed(3000)
-        time.sleep(1)
+        # self.robot.set_gripper_enable(True)
+        # time.sleep(1)
+        # self.robot.set_gripper_mode(0)
+        # time.sleep(1)
+        # self.robot.set_gripper_speed(3000)
+        # time.sleep(1)
 
     def _get_gripper_pos(self) -> float:
-        if self.robot is None:
-            return 0.0
-        code, gripper_pos = self.robot.get_gripper_position()
-        while code != 0 or gripper_pos is None:
-            print(f"Error code {code} in get_gripper_position(). {gripper_pos}")
-            time.sleep(0.001)
-            code, gripper_pos = self.robot.get_gripper_position()
-            if code == 22:
-                self._clear_error_states()
 
-        normalized_gripper_pos = (gripper_pos - self.GRIPPER_OPEN) / (
-            self.GRIPPER_CLOSE - self.GRIPPER_OPEN
-        )
-        return normalized_gripper_pos
+        # if self.robot is None:
+        #     return 0.0
+        # code, gripper_pos = self.robot.get_gripper_position()
+        # while code != 0 or gripper_pos is None:
+        #     print(f"Error code {code} in get_gripper_position(). {gripper_pos}")
+        #     time.sleep(0.001)
+        #     code, gripper_pos = self.robot.get_gripper_position()
+        #     if code == 22:
+        #         self._clear_error_states()
+
+        # normalized_gripper_pos = (gripper_pos - self.GRIPPER_OPEN) / (
+        #     self.GRIPPER_CLOSE - self.GRIPPER_OPEN
+        # )
+        return 0
 
     def _set_gripper_position(self, pos: int) -> None:
         if self.robot is None:
@@ -264,15 +294,15 @@ class XArmRobot(Robot):
 
             # command position
             self._set_position(
-                self.last_state.joints() + delta,
+                self.last_state.joints() + delta[0:6],
             )
 
-            if gripper_command is not None:
-                set_point = gripper_command
-                self._set_gripper_position(
-                    self.GRIPPER_OPEN
-                    + set_point * (self.GRIPPER_CLOSE - self.GRIPPER_OPEN)
-                )
+            # if gripper_command is not None:
+            #     set_point = gripper_command
+            #     self._set_gripper_position(
+            #         self.GRIPPER_OPEN
+            #         + set_point * (self.GRIPPER_CLOSE - self.GRIPPER_OPEN)
+            #     )
             self.last_state = self._update_last_state()
 
             rate.sleep()
@@ -282,15 +312,15 @@ class XArmRobot(Robot):
                 # Mean, Std, Min, Max, only show 3 decimal places and string pad with 10 spaces
                 frequency = 1 / np.mean(step_times)
                 # print(f"Step time - mean: {np.mean(step_times):10.3f}, std: {np.std(step_times):10.3f}, min: {np.min(step_times):10.3f}, max: {np.max(step_times):10.3f}")
-                print(
-                    f"Low  Level Frequency - mean: {frequency:10.3f}, std: {np.std(frequency):10.3f}, min: {np.min(frequency):10.3f}, max: {np.max(frequency):10.3f}"
-                )
+                # print(
+                #     f"Low  Level Frequency - mean: {frequency:10.3f}, std: {np.std(frequency):10.3f}, min: {np.min(frequency):10.3f}, max: {np.max(frequency):10.3f}"
+                # )
                 step_times = []
 
     def _update_last_state(self) -> RobotState:
         with self.last_state_lock:
             if self.robot is None:
-                return RobotState(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, np.zeros(3))
+                return RobotState(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, np.zeros(3))
 
             gripper_pos = self._get_gripper_pos()
 

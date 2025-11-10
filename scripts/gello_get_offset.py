@@ -14,6 +14,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 MENAGERIE_ROOT: Path = Path(__file__).parent / "third_party" / "mujoco_menagerie"
 
 
+
+# gello angles: 1.570796 4.799655 2.879793 4.747296 4.642576 0.0
+# joint-sign: 1 1 -1 1 1 1
 @dataclass
 class Args:
     port: str = "/dev/ttyUSB0"
