@@ -5,6 +5,8 @@ from typing import Dict, Optional
 
 import numpy as np
 from pyquaternion import Quaternion
+from scripts.sensor import SensorProcessorHybrid
+from scripts.sensor_positions import SensorPositionCalculator
 
 from gello.robots.robot import Robot
 
@@ -162,6 +164,8 @@ class XArmRobot(Robot):
         self.real = real
         self.max_delta = max_delta
 
+        
+        self.setup_sensors()
 
         raw = input(
             f"\nCurrent joints (rad): 0.5,0.02,0.5\n"
@@ -211,6 +215,35 @@ class XArmRobot(Robot):
         if real:
             self.command_thread = threading.Thread(target=self._robot_thread)
             self.command_thread.start()
+
+
+    def setup_sensors(self):
+        """
+        Initialize and start the sensor processor.
+        """
+        self.sensor_ip = "10.68.62.159"
+        self.sensor_port = 5000
+        self.sensor_calculator = SensorPositionCalculator("sensor_positions.json")
+        self.sensor_processor = SensorProcessorHybrid(ip=self.sensor_ip, port=self.sensor_port, mode="raw_data", enable_plot=False)
+        self.sensor_processor.start_websocket()
+        self.positions = self.load_sensor_positions()
+
+    def load_sensor_positions(self):
+        """
+        Loads the predefined sensor positions from a JSON file.
+
+        Returns:
+            np.array: The stored sensor positions.
+        """
+        try:
+            with open(self.config_file, "r") as f:
+                sensor_data = json.load(f)
+            return np.array(sensor_data["positions"])
+        except FileNotFoundError:
+            print(f"Error: Config file '{self.config_file}' not found!")
+            return np.zeros((32, 3))  # Default empty positions if file is missing
+
+
 
     def get_state(self) -> RobotState:
         with self.last_state_lock:
@@ -360,15 +393,24 @@ class XArmRobot(Robot):
 
     def get_observations(self) -> Dict[str, np.ndarray]:
         state = self.get_state()
-        pos_quat = np.concatenate([state.cartesian_pos(), state.quat()])
+        pos_quat = np.concatenate([state.cartesian_pos()])
         joints = self.get_joint_state()
+        tact_data = self.get_tactile_data()
         return {
             "joint_positions": joints,  # rotational joint + gripper state
             "joint_velocities": joints,
             "ee_pos_quat": pos_quat,
             "gripper_position": np.array(state.gripper_pos()),
+            "tactile_data" : tact_data,
+            "target_position": self.target_position
+
         }
 
+
+    def get_tactile_data(self):
+        force = np.concatenate([self.sensor.sensor_data_group1[-1], self.sensor.sensor_data_group2[-1]])
+        return force 
+    
 
 def main():
     ip = "192.168.1.226"

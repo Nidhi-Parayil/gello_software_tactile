@@ -36,6 +36,7 @@ class Args:
     gello_port: Optional[str] = None
     mock: bool = False
     use_save_interface: bool = False
+    use_tactile_sensor:bool = False
     data_dir: str = "~/bc_data"
     bimanual: bool = False
     verbose: bool = False

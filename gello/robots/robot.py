@@ -82,6 +82,8 @@ class PrintRobot(Robot):
             "joint_velocities": joint_state,
             "ee_pos_quat": pos_quat,
             "gripper_position": np.array(0),
+            "tactile_data" : np.zeros((16,4)),
+            "target_position": np.zeros(3)
         }
 
 
