@@ -12,6 +12,8 @@ from gello.utils.launch_utils import instantiate_from_dict
 from gello.zmq_core.robot_node import ZMQClientRobot
 
 
+
+
 def print_color(*args, color=None, attrs=(), **kwargs):
     import termcolor
 
@@ -41,6 +43,9 @@ class Args:
     def __post_init__(self):
         if self.start_joints is not None:
             self.start_joints = np.array(self.start_joints)
+
+
+
 
 
 def main(args):
