@@ -212,3 +212,4 @@ def run_control_loop(
                 break
 
         obs = env.step(action)
+    

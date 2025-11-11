@@ -9,7 +9,8 @@ from scripts.sensor import SensorProcessorHybrid
 from scripts.sensor_positions import SensorPositionCalculator
 
 from gello.robots.robot import Robot
-
+import json   
+from pathlib import Path
 
 def _aa_from_quat(quat: np.ndarray) -> np.ndarray:
     """Convert a quaternion to an axis-angle representation.
@@ -156,6 +157,7 @@ class XArmRobot(Robot):
     def __init__(
         self,
         ip: str = "192.168.1.226",
+        use_sensor:bool = False,
         real: bool = True,
         control_frequency: float = 100.0,
         max_delta: float = DEFAULT_MAX_DELTA,
@@ -163,9 +165,11 @@ class XArmRobot(Robot):
         # print(ip)
         self.real = real
         self.max_delta = max_delta
+        self.use_sensor = use_sensor
 
-        
-        self.setup_sensors()
+        if self.use_sensor:
+            self.setup_sensors()
+            print("sesnor")
 
         raw = input(
             f"\nCurrent joints (rad): 0.5,0.02,0.5\n"
@@ -223,10 +227,14 @@ class XArmRobot(Robot):
         """
         self.sensor_ip = "10.68.62.159"
         self.sensor_port = 5000
-        self.sensor_calculator = SensorPositionCalculator("sensor_positions.json")
-        self.sensor_processor = SensorProcessorHybrid(ip=self.sensor_ip, port=self.sensor_port, mode="raw_data", enable_plot=False)
-        self.sensor_processor.start_websocket()
+        project_root = Path(__file__).resolve().parents[2]
+        self.config_file = project_root / "scripts" / "sensor_positions.json"
+        self.sensor_calculator = SensorPositionCalculator(self.config_file)
+        self.sensor = SensorProcessorHybrid(ip=self.sensor_ip, port=self.sensor_port, mode="raw_data", enable_plot=True)
+        # self.sensor.start_websocket()
+        self.sensor.start()
         self.positions = self.load_sensor_positions()
+        
 
     def load_sensor_positions(self):
         """
@@ -395,18 +403,27 @@ class XArmRobot(Robot):
         state = self.get_state()
         pos_quat = np.concatenate([state.cartesian_pos()])
         joints = self.get_joint_state()
-        tact_data = self.get_tactile_data()
-        return {
-            "joint_positions": joints,  # rotational joint + gripper state
-            "joint_velocities": joints,
-            "ee_pos_quat": pos_quat,
-            "gripper_position": np.array(state.gripper_pos()),
-            "tactile_data" : tact_data,
-            "target_position": self.target_position
+        if self.use_sensor:
+            tact_data = self.get_tactile_data()
+            return {
+                "joint_positions": joints,  # rotational joint + gripper state
+                "joint_velocities": joints,
+                "ee_pos_quat": pos_quat,
+                "gripper_position": np.array(state.gripper_pos()),
+                "tactile_data" : tact_data,
+                "target_position": self.target_position
 
-        }
+            }
+        else:
+            return {
+                "joint_positions": joints,  # rotational joint + gripper state
+                "joint_velocities": joints,
+                "ee_pos_quat": pos_quat,
+                "gripper_position": np.array(state.gripper_pos()),
+                "target_position": self.target_position
 
-
+            }
+        
     def get_tactile_data(self):
         force = np.concatenate([self.sensor.sensor_data_group1[-1], self.sensor.sensor_data_group2[-1]])
         return force 
