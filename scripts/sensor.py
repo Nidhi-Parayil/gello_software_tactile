@@ -272,10 +272,10 @@ class SensorProcessorHybrid:
 
         return [self.im_group1, self.im_group2]
 
-    def start(self):
+    def start_plot(self):
         """Start the live heatmap plot."""
         if self.plot_enabled:
-            self.ani = FuncAnimation(self.figure, self._update_plot_heat, blit=True, interval=100)
+            self.ani = FuncAnimation(self.figure, self._update_plot_heat, blit=True, interval=100,cache_frame_data=False)
             plt.show()
 
 if __name__ == "__main__":

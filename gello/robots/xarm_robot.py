@@ -231,8 +231,8 @@ class XArmRobot(Robot):
         self.config_file = project_root / "scripts" / "sensor_positions.json"
         self.sensor_calculator = SensorPositionCalculator(self.config_file)
         self.sensor = SensorProcessorHybrid(ip=self.sensor_ip, port=self.sensor_port, mode="raw_data", enable_plot=True)
-        # self.sensor.start_websocket()
-        self.sensor.start()
+        self.sensor.start_websocket()
+        # self.sensor.start_plot()
         self.positions = self.load_sensor_positions()
         
 
