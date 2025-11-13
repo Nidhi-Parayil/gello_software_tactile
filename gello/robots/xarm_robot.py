@@ -399,10 +399,15 @@ class XArmRobot(Robot):
         if ret in [1, 9]:
             self._clear_error_states()
 
+
+    def get_sensor_positions(self, pos):
+        return self.sensor_calculator.calculate_absolute_positions(pos[0:3])
+
     def get_observations(self) -> Dict[str, np.ndarray]:
         state = self.get_state()
         pos_quat = np.concatenate([state.cartesian_pos()])
         joints = self.get_joint_state()
+        tact_pos = self.get_sensor_positions(pos_quat[0:3])
         if self.use_sensor:
             tact_data = self.get_tactile_data()
             return {
@@ -411,6 +416,7 @@ class XArmRobot(Robot):
                 "ee_pos_quat": pos_quat,
                 "gripper_position": np.array(state.gripper_pos()),
                 "tactile_data" : tact_data,
+                "tactile_positions" : tact_pos,
                 "target_position": self.target_position
 
             }

@@ -31,4 +31,4 @@ General  instruction for connecting the sensors in any computer (test only on li
 
 
 python experiments/launch_nodes.py --robot xarm --use_sensor
-python experiments/run_env.py   --agent gello   --gello-port /dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FT9HDFUF-if00-port0
+python experiments/run_env.py   --agent gello   --gello-port /dev/serial/by-id/usb-FTDI_USB__-__Serial_Converter_FT9HDFUF-if00-port0 --use-save-interface
